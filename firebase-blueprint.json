@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "Company": {
+      "title": "Company",
+      "description": "Client partner corporate profile in Linchub ATS",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "companyName": { "type": "string", "maxLength": 150 },
+        "industry": { "type": "string", "maxLength": 100 },
+        "location": { "type": "string", "maxLength": 150 },
+        "contactEmail": { "type": "string", "maxLength": 150, "format": "email" },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "companyName", "industry", "location"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Recruitment request / job opening posted for a client company",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "position": { "type": "string", "maxLength": 150 },
+        "department": { "type": "string", "maxLength": 100 },
+        "jobDescription": { "type": "string", "maxLength": 5000 },
+        "jobStatus": { "type": "string", "enum": ["Open", "Closed", "Draft"] },
+        "recruiterId": { "type": "string", "maxLength": 128 },
+        "targetHires": { "type": "number" },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "companyId", "position", "department", "jobStatus"]
+    },
+    "Candidate": {
+      "title": "Candidate",
+      "description": "Candidate dossier record (CDD) in Linchub ATS recruitment pipeline",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "jobId": { "type": "string", "maxLength": 128 },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "fullName": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150, "format": "email" },
+        "phone": { "type": "string", "maxLength": 50 },
+        "position": { "type": "string", "maxLength": 150 },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Applied",
+            "Preliminary",
+            "Screening",
+            "Interview HR",
+            "Interview User",
+            "Offering",
+            "Hired",
+            "Rejected",
+            "Withdrawn"
+          ]
+        },
+        "preliminaryScore": { "type": "number" },
+        "preliminaryStatus": {
+          "type": "string",
+          "enum": ["Pending", "Qualified", "Need Review", "Not Qualified"]
+        },
+        "preliminaryNotes": { "type": "string", "maxLength": 2000 },
+        "cvText": { "type": "string", "maxLength": 20000 },
+        "aiScore": { "type": "number" },
+        "aiSummary": { "type": "string", "maxLength": 2000 },
+        "aiRecommendation": {
+          "type": "string",
+          "enum": ["Recommended", "Consider", "Not Recommended"]
+        },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "updatedAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "jobId", "companyId", "fullName", "email", "position", "status"]
+    },
+    "User": {
+      "title": "User",
+      "description": "ATS User accounts for Admin, Recruiter, and Client stakeholders",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150, "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "recruiter", "client"] },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Audit trail of state transitions, comments, and candidate modifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "candidateId": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "maxLength": 150 },
+        "performedBy": { "type": "string", "maxLength": 150 },
+        "timestamp": { "type": "string", "maxLength": 50 },
+        "details": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["id", "candidateId", "action", "performedBy", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/companies/{companyId}": {
+      "schema": { "$ref": "#/entities/Company" },
+      "description": "Collection of client companies partnered with Linchub"
+    },
+    "/jobs/{jobId}": {
+      "schema": { "$ref": "#/entities/Job" },
+      "description": "Collection of active and past recruitment openings"
+    },
+    "/candidates/{candidateId}": {
+      "schema": { "$ref": "#/entities/Candidate" },
+      "description": "Collection of candidate profiles across all stages"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Collection of authorized users and role assignments"
+    },
+    "/activityLogs/{logId}": {
+      "schema": { "$ref": "#/entities/ActivityLog" },
+      "description": "Immutable audit trails for candidate stage transitions"
+    }
+  }
+}

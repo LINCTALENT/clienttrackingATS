@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny catch-all (Phase 4, Pillar 1)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Companies Collection
+    match /companies/{companyId} {
+      allow read: if isValidId(companyId);
+      allow create: if isValidId(companyId)
+        && incoming().companyName is string && incoming().companyName.size() > 0 && incoming().companyName.size() <= 150
+        && incoming().industry is string && incoming().industry.size() <= 100
+        && incoming().location is string && incoming().location.size() <= 150;
+      allow update: if isValidId(companyId)
+        && incoming().companyName is string && incoming().companyName.size() > 0 && incoming().companyName.size() <= 150;
+      allow delete: if isValidId(companyId);
+    }
+
+    // Jobs Collection
+    match /jobs/{jobId} {
+      allow read: if isValidId(jobId);
+      allow create: if isValidId(jobId)
+        && incoming().position is string && incoming().position.size() > 0 && incoming().position.size() <= 150
+        && incoming().companyId is string && incoming().companyId.size() <= 128
+        && incoming().jobStatus in ['Open', 'Closed', 'Draft'];
+      allow update: if isValidId(jobId)
+        && incoming().position is string && incoming().position.size() > 0 && incoming().position.size() <= 150;
+      allow delete: if isValidId(jobId);
+    }
+
+    // Candidates Collection
+    match /candidates/{candidateId} {
+      allow read: if isValidId(candidateId);
+      allow create: if isValidId(candidateId)
+        && incoming().fullName is string && incoming().fullName.size() > 0 && incoming().fullName.size() <= 150
+        && incoming().email is string && incoming().email.size() <= 150
+        && incoming().companyId is string && incoming().companyId.size() <= 128
+        && incoming().status in ['Applied', 'Preliminary', 'Screening', 'Interview HR', 'Interview User', 'Offering', 'Hired', 'Rejected', 'Withdrawn'];
+      allow update: if isValidId(candidateId)
+        && incoming().fullName is string && incoming().fullName.size() > 0 && incoming().fullName.size() <= 150
+        && incoming().status in ['Applied', 'Preliminary', 'Screening', 'Interview HR', 'Interview User', 'Offering', 'Hired', 'Rejected', 'Withdrawn'];
+      allow delete: if isValidId(candidateId);
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isValidId(userId);
+      allow create: if isValidId(userId)
+        && incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 150
+        && incoming().email is string && incoming().email.size() <= 150
+        && incoming().role in ['admin', 'recruiter', 'client'];
+      allow update: if isValidId(userId)
+        && incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 150;
+      allow delete: if isValidId(userId);
+    }
+
+    // Activity Logs Collection (Immutable Audit Trail)
+    match /activityLogs/{logId} {
+      allow read: if isValidId(logId);
+      allow create: if isValidId(logId)
+        && incoming().candidateId is string && incoming().candidateId.size() <= 128
+        && incoming().action is string && incoming().action.size() <= 150
+        && incoming().performedBy is string && incoming().performedBy.size() <= 150;
+      allow update: if false; // Logs are strictly append-only
+      allow delete: if isValidId(logId);
+    }
+  }
+}

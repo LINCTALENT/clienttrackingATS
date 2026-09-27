@@ -1,0 +1,6 @@
+{
+  "name": "Linchub ATS Mini & Client Portal",
+  "description": "Sistem recruitment ATS terpadu Linchub dengan Preliminary Assessment, AI CV Analysis Gemini, Pipeline Tracking, dan Client Portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
