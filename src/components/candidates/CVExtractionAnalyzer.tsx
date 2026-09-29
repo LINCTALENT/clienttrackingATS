@@ -20,16 +20,20 @@ import {
   FileUp,
   X,
   Loader2,
+  FileSpreadsheet,
 } from 'lucide-react';
+import { GoogleSheetsService } from '../../services/googleSheetsService';
 
 interface CVExtractionAnalyzerProps {
   jobs: Job[];
   companies: Company[];
+  onOpenGoogleSheetsModal?: () => void;
 }
 
 export const CVExtractionAnalyzer: React.FC<CVExtractionAnalyzerProps> = ({
   jobs,
   companies,
+  onOpenGoogleSheetsModal,
 }) => {
   const [selectedJobId, setSelectedJobId] = useState<string>('custom');
   const [positionInput, setPositionInput] = useState<string>('');
@@ -45,6 +49,8 @@ export const CVExtractionAnalyzer: React.FC<CVExtractionAnalyzerProps> = ({
   const [result, setResult] = useState<CVExtractionAnalysis | null>(null);
   const [activeView, setActiveView] = useState<'visual' | 'json'>('visual');
   const [copied, setCopied] = useState(false);
+  const [savingToSheet, setSavingToSheet] = useState(false);
+  const [sheetSaveStatus, setSheetSaveStatus] = useState<{ success: boolean; message: string } | null>(null);
 
   const handleSelectJob = (jobId: string) => {
     setSelectedJobId(jobId);
@@ -122,6 +128,7 @@ export const CVExtractionAnalyzer: React.FC<CVExtractionAnalyzerProps> = ({
 
     setLoading(true);
     setErrorMsg(null);
+    setSheetSaveStatus(null);
 
     try {
       const analysis = await AIService.extractAndAnalyzeCV(
@@ -131,8 +138,9 @@ export const CVExtractionAnalyzer: React.FC<CVExtractionAnalyzerProps> = ({
         pdfBase64 || undefined
       );
       setResult(analysis);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mengekstrak dan menganalisis CV');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(msg || 'Gagal mengekstrak dan menganalisis CV');
     } finally {
       setLoading(false);
     }
@@ -144,6 +152,24 @@ export const CVExtractionAnalyzer: React.FC<CVExtractionAnalyzerProps> = ({
     navigator.clipboard.writeText(jsonStr);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleSaveToSheet = async () => {
+    if (!result) return;
+    setSavingToSheet(true);
+    setSheetSaveStatus(null);
+    try {
+      const res = await GoogleSheetsService.saveAnalysisToSheet(
+        result,
+        positionInput.trim() || result.candidateProfile.targetPosition || 'Umum'
+      );
+      setSheetSaveStatus(res);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSheetSaveStatus({ success: false, message: `Gagal menyimpan: ${msg}` });
+    } finally {
+      setSavingToSheet(false);
+    }
   };
 
   const getMatchBadgeColor = (match: string) => {
@@ -419,9 +445,47 @@ export const CVExtractionAnalyzer: React.FC<CVExtractionAnalyzerProps> = ({
                         </>
                       )}
                     </button>
+
+                    <button
+                      onClick={handleSaveToSheet}
+                      disabled={savingToSheet}
+                      className="px-2.5 py-1.5 text-xs rounded bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                      title="Simpan Hasil Analisis ke Google Sheets"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                      <span>{savingToSheet ? 'Menyimpan...' : 'Simpan ke Google Sheet'}</span>
+                    </button>
                   </div>
                 )}
               </div>
+
+              {/* Google Sheets Save Status Feedback */}
+              {sheetSaveStatus && (
+                <div
+                  className={`mb-4 p-3 rounded-lg border text-xs flex items-center justify-between gap-2 ${
+                    sheetSaveStatus.success
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                      : 'border-amber-200 bg-amber-50 text-amber-900'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {sheetSaveStatus.success ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                    )}
+                    <span>{sheetSaveStatus.message}</span>
+                  </div>
+                  {onOpenGoogleSheetsModal && !GoogleSheetsService.isConfigured() && (
+                    <button
+                      onClick={onOpenGoogleSheetsModal}
+                      className="px-2 py-1 rounded bg-amber-600 text-white text-[11px] font-medium hover:bg-amber-700 whitespace-nowrap cursor-pointer"
+                    >
+                      Konfigurasi Sheet
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Content Area */}
               {!result && !loading && (

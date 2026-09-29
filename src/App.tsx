@@ -23,6 +23,8 @@ import { AddCandidateModal } from './components/candidates/AddCandidateModal';
 import { ActivityLogView } from './components/common/ActivityLogView';
 import { ConfirmDeleteModal } from './components/common/ConfirmDeleteModal';
 import { CVExtractionAnalyzer } from './components/candidates/CVExtractionAnalyzer';
+import { GoogleSheetsModal } from './components/settings/GoogleSheetsModal';
+import { GoogleSheetsService } from './services/googleSheetsService';
 
 export default function App() {
   // If not logged in, currentUser is null -> renders LoginPage
@@ -47,6 +49,8 @@ export default function App() {
 
   // Reset Demo Data confirmation modal
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
+  const [showGoogleSheetsModal, setShowGoogleSheetsModal] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   // Initial Firebase Cloud Firestore sync
   useEffect(() => {
@@ -89,6 +93,43 @@ export default function App() {
     if (selectedCandidate) {
       const refreshed = StorageService.getCandidateById(selectedCandidate.id);
       if (refreshed) setSelectedCandidate(refreshed);
+    }
+  };
+
+  // Comprehensive Refresh & Sync
+  const handleFullRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await StorageService.syncFromFirestore();
+      refreshData();
+      if (GoogleSheetsService.isConfigured() && GoogleSheetsService.getConfig().autoSync) {
+        await GoogleSheetsService.backupAllToSheet({
+          companies: StorageService.getCompanies(),
+          jobs: StorageService.getJobs(),
+          candidates: StorageService.getCandidates(),
+          users: StorageService.getUsers(),
+          logs: StorageService.getLogs(),
+        });
+      }
+    } catch (e) {
+      console.error('Refresh error:', e);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    refreshData();
+    // Auto-sync on feature switch if enabled
+    if (GoogleSheetsService.isConfigured() && GoogleSheetsService.getConfig().autoSync) {
+      GoogleSheetsService.backupAllToSheet({
+        companies,
+        jobs,
+        candidates,
+        users,
+        logs,
+      }).catch(() => {});
     }
   };
 
@@ -149,6 +190,9 @@ export default function App() {
         companies={companies}
         onResetData={handleResetData}
         onLogout={handleLogout}
+        onRefreshAll={handleFullRefresh}
+        onOpenGoogleSheets={() => setShowGoogleSheetsModal(true)}
+        isRefreshing={isRefreshing}
       />
 
       {/* Main Container */}
@@ -157,13 +201,12 @@ export default function App() {
         <Sidebar
           currentUser={currentUser}
           activeTab={activeTab}
-          onSelectTab={(tab) => {
-            setActiveTab(tab);
-          }}
+          onSelectTab={handleTabChange}
           companies={companies}
           candidatesCount={relevantCandidates.length}
           jobsCount={relevantJobs.length}
           onLogout={handleLogout}
+          onOpenGoogleSheets={() => setShowGoogleSheetsModal(true)}
         />
 
         {/* Dynamic Content Viewport */}
@@ -231,6 +274,7 @@ export default function App() {
                       <CVExtractionAnalyzer
                         jobs={jobs}
                         companies={companies}
+                        onOpenGoogleSheetsModal={() => setShowGoogleSheetsModal(true)}
                       />
                     )}
 
@@ -263,6 +307,7 @@ export default function App() {
                       <CVExtractionAnalyzer
                         jobs={jobs}
                         companies={companies}
+                        onOpenGoogleSheetsModal={() => setShowGoogleSheetsModal(true)}
                       />
                     )}
 
@@ -385,6 +430,20 @@ export default function App() {
         confirmLabel="Reset Sekarang"
         onConfirm={handleConfirmResetData}
         onCancel={() => setShowResetModal(false)}
+      />
+
+      {/* Google Sheets & Apps Script Configuration Modal */}
+      <GoogleSheetsModal
+        isOpen={showGoogleSheetsModal}
+        onClose={() => setShowGoogleSheetsModal(false)}
+        data={{
+          companies,
+          jobs,
+          candidates,
+          users,
+          logs,
+        }}
+        onDataRefresh={refreshData}
       />
     </div>
   );

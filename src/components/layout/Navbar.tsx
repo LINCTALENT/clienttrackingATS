@@ -9,7 +9,10 @@ import {
   Sparkles,
   Check,
   LogOut,
+  RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
+import { GoogleSheetsService } from '../../services/googleSheetsService';
 
 interface NavbarProps {
   currentUser: User;
@@ -18,6 +21,9 @@ interface NavbarProps {
   companies: Company[];
   onResetData: () => void;
   onLogout: () => void;
+  onRefreshAll?: () => void;
+  onOpenGoogleSheets?: () => void;
+  isRefreshing?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -27,8 +33,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   companies,
   onResetData,
   onLogout,
+  onRefreshAll,
+  onOpenGoogleSheets,
+  isRefreshing,
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const isSheetConfigured = GoogleSheetsService.isConfigured();
 
   const getCompany = (companyId: string | null) => {
     if (!companyId) return null;
@@ -65,15 +75,49 @@ export const Navbar: React.FC<NavbarProps> = ({
         </span>
       </div>
 
-      {/* Zone 3: Role Switcher & Controls */}
-      <div className="flex items-center gap-2.5">
+      {/* Zone 3: Controls, Refresh, Google Sheets & Role Switcher */}
+      <div className="flex items-center gap-2">
+        {/* Refresh All Button */}
+        {onRefreshAll && (
+          <button
+            onClick={onRefreshAll}
+            disabled={isRefreshing}
+            title="Refresh semua data & sinkronkan"
+            className="px-2.5 py-1.5 rounded-lg border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-50 text-neutral-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-neutral-900' : 'text-neutral-500'}`} />
+            <span className="hidden sm:inline">Refresh Data</span>
+          </button>
+        )}
+
+        {/* Google Sheets Integration Button */}
+        {onOpenGoogleSheets && (
+          <button
+            onClick={onOpenGoogleSheets}
+            title="Konfigurasi & Backup Google Sheets"
+            className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+              isSheetConfigured
+                ? 'border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 text-emerald-800'
+                : 'border-neutral-200 hover:border-neutral-900 hover:bg-neutral-50 text-neutral-700'
+            }`}
+          >
+            <FileSpreadsheet className={`w-3.5 h-3.5 ${isSheetConfigured ? 'text-emerald-600' : 'text-neutral-500'}`} />
+            <span className="hidden sm:inline">Google Sheet</span>
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isSheetConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'
+              }`}
+            />
+          </button>
+        )}
+
         <button
           onClick={onResetData}
           title="Reset ke data awal"
           className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded transition-colors text-xs flex items-center gap-1"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span className="hidden lg:inline text-xs">Reset Data</span>
+          <span className="hidden lg:inline text-xs">Reset</span>
         </button>
 
         {/* Role Switcher Popover */}

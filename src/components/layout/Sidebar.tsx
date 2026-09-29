@@ -13,7 +13,9 @@ import {
   Layers,
   LogOut,
   FileSearch,
+  FileSpreadsheet,
 } from 'lucide-react';
+import { GoogleSheetsService } from '../../services/googleSheetsService';
 
 interface SidebarProps {
   currentUser: User;
@@ -23,6 +25,7 @@ interface SidebarProps {
   candidatesCount: number;
   jobsCount: number;
   onLogout: () => void;
+  onOpenGoogleSheets?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -33,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   candidatesCount,
   jobsCount,
   onLogout,
+  onOpenGoogleSheets,
 }) => {
   const userCompany = companies.find((c) => c.id === currentUser.companyId);
 
@@ -128,6 +132,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer Info & Logout */}
       <div className="p-3.5 border-t border-neutral-100 space-y-2">
+        {onOpenGoogleSheets && (
+          <button
+            onClick={onOpenGoogleSheets}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="font-medium">Google Sheet Sync</span>
+            </div>
+            <span className={`w-1.5 h-1.5 rounded-full ${GoogleSheetsService.isConfigured() ? 'bg-emerald-500' : 'bg-neutral-300'}`} />
+          </button>
+        )}
+
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-neutral-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
